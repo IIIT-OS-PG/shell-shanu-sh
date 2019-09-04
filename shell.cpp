@@ -77,30 +77,32 @@ void pipedexecution(vector<vector<string>> tokens)
 	cout<<arr1[0]<<" "<<arr1[1]<<"\n";
 	p=fork();
 	
-	if(p==0)
+	if(p>0)
 	{
-		//close(0);
-		dup(pip[0]);
+		wait(NULL);
+		dup2(pip[0],0);
 		close(pip[0]);
+		close(pip[1]);
 		if(execvp(arr1[0],arr1)<0)
 		{
-			perror("Execution failed in child");
+			perror("Execution failed in parent");
 			exit(1);
 		}
 	}
 	else
 	{
 		
-		close(1);
-		dup(pip[1]);
+		
+		dup2(pip[1],1);
 		close(pip[0]);
+		close(pip[1]);
 		if(execvp(arr[0],arr)<0)
 		{
-			perror("Execution failed in parent");
+			perror("Execution failed in child");
 			exit(1);
 		}
 
-		wait(NULL);
+		
 	}
 }
 
