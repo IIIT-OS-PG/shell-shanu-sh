@@ -21,7 +21,8 @@ void normalexec(vector<vector<string>> tokens)
 	bool flag=false;
 	int k;
 	int pip[2];
-	for(k=0;k<tokens[0].size();k++){
+	for(k=0;k<tokens[0].size();k++)
+	{
 		if((tokens[0][k].compare(">")==0)||(tokens[0][k].compare(">>")==0))
 		{
 			flag=true;
@@ -73,20 +74,26 @@ void pipedexecution(vector<vector<string>> tokens)
 	int pip[2];
 	int p;
 
-	pipe(pip);
-
-	int fd=0;
-
-	int u=0;
+	int u=0,f1;
+	int k;
+	bool flag=false;
 	for(int i=0;i<tokens.size();i++)
 	{
-		
-		for(int k=0;k<tokens[i].size();k++){
+		pipe(pip);
+		for(k=0;k<tokens[i].size();k++){
+
+			cout<<tokens[i][k]<<" ";
+			if((tokens[i][k].compare(">")==0)||(tokens[i][k].compare(">>")==0))
+			{
+				flag=true;
+				break;
+			}
+
 			arr[k]=(char*)tokens[i][k].c_str();
 			cout<<arr[k]<<endl;
 		}
 		
-		arr[tokens[i].size()]=NULL;
+		arr[k]=NULL;
 		
 		p=fork();
 
@@ -95,21 +102,39 @@ void pipedexecution(vector<vector<string>> tokens)
 		{
 			cout<<"Child begin\n";
 			//close(pip[1]);
-			dup2(u,0);
-			//close(pip[0]);
-						
-			if(i!=tokens.size()-1)
-				dup2(pip[1],1);
+			if(flag)
+			{
+				
+				cout<<"Token is "<<tokens[i][k+1]<<endl;
+				if(tokens[i][k].compare(">")==0)
+					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
+				else
+					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_APPEND);
+				chmod(tokens[i][k+1].c_str(),0666);
+				dup2(f1,1);
+				dup2(u,0);
+				close(pip[0]);
+				close(pip[1]);
 
-			close(pip[0]);
-			close(pip[1]);
+			}
+			else
+			{
+				dup2(u,0);
+				//close(pip[0]);
+							
+				if(i!=tokens.size()-1)
+					dup2(pip[1],1);
 
+				close(pip[0]);
+				close(pip[1]);
+			}
 		
 			if(execvp(arr[0],arr)<0)
 			{
 				perror("Execution failed");
 				
 			}
+			close(f1);
 			//exit(0);
 			cout<<"Child exit\n";	
 		}
@@ -164,14 +189,14 @@ vector<vector <string> > getTokens(char str[])
 		flag=true;
 		if(str[i]==' '||str[i]=='\t')
 		{
-			//cout<<"While pushing "<<temp<<"\n";
+			cout<<"While pushing "<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
 		}
 		else if(str[i]=='>'&&str[i+1]=='>')
 		{
-			cout<<"While pushing "<<temp<<"\n";
+			 cout<<"While pushing "<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
@@ -191,6 +216,7 @@ vector<vector <string> > getTokens(char str[])
 
 		else if(str[i]=='|' && flag)
 		{
+			cout<<"While pushing "<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
@@ -200,16 +226,23 @@ vector<vector <string> > getTokens(char str[])
 		else if(flag)
 		{
 			temp=temp+str[i];
-			cout<<"temp in or part is "<<temp<<"\n";
+			// cout<<"temp in or part is "<<temp<<"\n";
 		}
 	}
-
+	cout<<"While pushing "<<temp<<"\n";
 	if(temp!="")
 		t.push_back(temp);
 
 	if(t.size()!=0)
 		vt.push_back(t);
 
+
+	// for(auto x:vt)
+	// {
+	// 	for(auto d:x)
+	// 		cout<<d<<" \" \" ";
+	// 	cout<<"\n";
+	// }
 	cout<<"size of token is "<<vt.size()<<"\n";
 	return vt;
 }
