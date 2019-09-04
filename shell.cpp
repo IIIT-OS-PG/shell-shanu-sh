@@ -2,8 +2,12 @@
 #include<string>
 #include<unistd.h>
 #include<cstring>
-#include<sys/wait.h> 
+#include<sys/wait.h>
+#include<sys/stat.h>
+#include<sys/types.h>
+#include<fcntl.h> 
 #include<vector>
+#include<dirent.h>
 
 using namespace std;
 
@@ -14,27 +18,52 @@ void normalexec(vector<vector<string>> tokens)
 {
 	char *arr[1000];
 	int p;
-	
-	for(int k=0;k<tokens[0].size();k++)
+	bool flag=false;
+	int k;
+	int pip[2];
+	for(k=0;k<tokens[0].size();k++){
+		if((tokens[0][k].compare(">")==0)||(tokens[0][k].compare(">>")==0))
+		{
+			flag=true;
+			break;
+		}
 		arr[k]=(char*)tokens[0][k].c_str();
-	arr[tokens[0].size()]=NULL;
+		cout<<arr[k]<<endl;
+	}
+	arr[k]=NULL;
+
 	p=fork();
 	
 	if(p==0)
 	{
-		cout<<"Child\n";	
+		cout<<"Child\n";
+		int f1;
+		if(flag)
+		{
+			pipe(pip);
+
+			cout<<"TOken is "<<tokens[0][k+1]<<endl;
+			if(tokens[0][k].compare(">")==0)
+				f1=open(tokens[0][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
+			else
+				f1=open(tokens[0][k+1].c_str(),O_WRONLY|O_APPEND);
+			chmod(tokens[0][k+1].c_str(),0666);
+			dup2(f1,1);
+			close(pip[0]);
+			close(pip[1]);
+
+		}	
 		if(execvp(arr[0],arr)<0)
 		{
 			perror("Execution failed");
 			exit(1);
 		}
+		close(f1);
 		cout<<"Child\n";	
 	}
 	else
 	{
 		wait(NULL);
-		cout<<"oipipi$";
-		
 	}
 }
 
@@ -54,7 +83,7 @@ void pipedexecution(vector<vector<string>> tokens)
 		
 		for(int k=0;k<tokens[i].size();k++){
 			arr[k]=(char*)tokens[i][k].c_str();
-			cout<<tokens[i][k]<<endl;
+			cout<<arr[k]<<endl;
 		}
 		
 		arr[tokens[i].size()]=NULL;
@@ -65,12 +94,11 @@ void pipedexecution(vector<vector<string>> tokens)
 		if(p==0)
 		{
 			cout<<"Child begin\n";
-			
-				dup2(u,0);
-			
-			if(i==tokens.size()-1)
-				dup2(1,1);
-			else
+			//close(pip[1]);
+			dup2(u,0);
+			//close(pip[0]);
+						
+			if(i!=tokens.size()-1)
 				dup2(pip[1],1);
 
 			close(pip[0]);
@@ -82,7 +110,7 @@ void pipedexecution(vector<vector<string>> tokens)
 				perror("Execution failed");
 				
 			}
-			exit(0);
+			//exit(0);
 			cout<<"Child exit\n";	
 		}
 		else
@@ -130,8 +158,10 @@ vector<vector <string> > getTokens(char str[])
 	vector< vector<string>> vt;
 	vector<string> t;
 	string temp="";
+	bool flag=true;
 	for(int i=0;i<strlen(str);i++)
 	{
+		flag=true;
 		if(str[i]==' '||str[i]=='\t')
 		{
 			//cout<<"While pushing "<<temp<<"\n";
@@ -139,7 +169,27 @@ vector<vector <string> > getTokens(char str[])
 				t.push_back(temp);
 			temp="";
 		}
-		else if(str[i]=='|')
+		else if(str[i]=='>'&&str[i+1]=='>')
+		{
+			cout<<"While pushing "<<temp<<"\n";
+			if(temp!="")
+				t.push_back(temp);
+			temp="";
+			t.push_back(">>");
+			i++;
+			flag=false;
+			continue;
+		}
+		else if(str[i]=='>'&&flag)
+		{
+			cout<<"While pushing "<<temp<<"\n";
+			if(temp!="")
+				t.push_back(temp);
+			temp="";
+			t.push_back(">");
+		}
+
+		else if(str[i]=='|' && flag)
 		{
 			if(temp!="")
 				t.push_back(temp);
@@ -147,8 +197,11 @@ vector<vector <string> > getTokens(char str[])
 			vt.push_back(t);
 			t.clear();
 		}
-		else
+		else if(flag)
+		{
 			temp=temp+str[i];
+			cout<<"temp in or part is "<<temp<<"\n";
+		}
 	}
 
 	if(temp!="")
