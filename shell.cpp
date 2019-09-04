@@ -4,10 +4,6 @@
 #include<cstring>
 #include<sys/wait.h> 
 #include<vector>
-#include<stdio.h> 
-#include<stdlib.h> 
-#include<fcntl.h> 
-#include<errno.h> 
 
 using namespace std;
 
@@ -16,94 +12,89 @@ vector<vector <string> > getTokens(char str[]);
 
 void normalexec(vector<vector<string>> tokens)
 {
-	char **arr;
+	char *arr[1000];
 	int p;
-	arr=(char **)malloc(1*sizeof(char**));
-
-	for(int i=0;i<tokens[0].size();i++)
-		arr[i]=(char*)malloc(100*sizeof(char));
 	
-	for(int i=0;i<tokens[0].size();i++)
-		strcpy(arr[i],tokens[0][i].c_str());
-
+	for(int k=0;k<tokens[0].size();k++)
+		arr[k]=(char*)tokens[0][k].c_str();
 	arr[tokens[0].size()]=NULL;
-	cout<<arr[0]<<"\n"<<arr[1]<<"\n"<<arr[2]<<"\n";
 	p=fork();
 	
 	if(p==0)
 	{
+		cout<<"Child\n";	
 		if(execvp(arr[0],arr)<0)
 		{
 			perror("Execution failed");
 			exit(1);
 		}
-		exit(0);
+		cout<<"Child\n";	
 	}
 	else
 	{
 		wait(NULL);
-		cout<<"$";
-		return;
+		cout<<"oipipi$";
+		
 	}
 }
 
 void pipedexecution(vector<vector<string>> tokens)
 {
-	char **arr;
+	char *arr[100];
 	int pip[2];
 	int p;
 
 	pipe(pip);
-	arr=(char **)malloc(1*sizeof(char**));
 
-	for(int i=0;i<tokens[0].size();i++)
-		arr[i]=(char*)malloc(100*sizeof(char));
-	
-	for(int i=0;i<tokens[0].size();i++)
-		strcpy(arr[i],tokens[0][i].c_str());
+	int fd=0;
 
-	char **arr1;
-	arr1=(char **)malloc(1*sizeof(char**));
-
-	for(int i=0;i<tokens[1].size();i++)
-		arr1[i]=(char*)malloc(100*sizeof(char));
-	
-	for(int i=0;i<tokens[1].size();i++)
-		strcpy(arr1[i],tokens[1][i].c_str());
-
-	arr[tokens[0].size()]=NULL;
-
-	arr1[tokens[0].size()]=NULL;
-	cout<<arr1[0]<<" "<<arr1[1]<<"\n";
-	p=fork();
-	
-	if(p>0)
-	{
-		wait(NULL);
-		dup2(pip[0],0);
-		close(pip[0]);
-		close(pip[1]);
-		if(execvp(arr1[0],arr1)<0)
-		{
-			perror("Execution failed in parent");
-			exit(1);
-		}
-	}
-	else
+	int u=0;
+	for(int i=0;i<tokens.size();i++)
 	{
 		
-		
-		dup2(pip[1],1);
-		close(pip[0]);
-		close(pip[1]);
-		if(execvp(arr[0],arr)<0)
-		{
-			perror("Execution failed in child");
-			exit(1);
+		for(int k=0;k<tokens[i].size();k++){
+			arr[k]=(char*)tokens[i][k].c_str();
+			cout<<tokens[i][k]<<endl;
 		}
+		
+		arr[tokens[i].size()]=NULL;
+		
+		p=fork();
+
+
+		if(p==0)
+		{
+			cout<<"Child begin\n";
+			
+				dup2(u,0);
+			
+			if(i==tokens.size()-1)
+				dup2(1,1);
+			else
+				dup2(pip[1],1);
+
+			close(pip[0]);
+			close(pip[1]);
 
 		
+			if(execvp(arr[0],arr)<0)
+			{
+				perror("Execution failed");
+				
+			}
+			exit(0);
+			cout<<"Child exit\n";	
+		}
+		else
+		{
+			wait(NULL);
+
+			close(pip[1]);
+			u=pip[0];
+		}
+		
 	}
+	
 }
 
 int main()
@@ -113,9 +104,10 @@ int main()
 	int p;
 	cout<<"\n";
 	cout<<"$";
-	while(getline(cin,s))
+	while(1)
 	{
 		// cout<<s<<"\n";
+		getline(cin,s);
 		strcpy(str,s.c_str());
 		vector< vector<string>> tokens=getTokens(str);
 
@@ -168,63 +160,3 @@ vector<vector <string> > getTokens(char str[])
 	cout<<"size of token is "<<vt.size()<<"\n";
 	return vt;
 }
-
-
-
-/*
-int main()
-{
-
-	cout<<"String processing\n";
-	// char str[]="ls -l|grep -i |cat t|toch -o -i p |ki| uou -o jk | kl -o |";
-	string s;
-	char str[1000];	
-	getline(cin,s);
-
-	strcpy(str,s.c_str());
-	//char str[]="ls -l";
-	vector< vector<string>> vt;
-	vector<string> t;
-	string temp="";
-	for(int i=0;i<strlen(str);i++)
-	{
-		if(str[i]==' '||str[i]=='\t')
-		{
-			cout<<"While pushing "<<temp<<"\n";
-			if(temp!="")
-				t.push_back(temp);
-			temp="";
-		}
-		else if(str[i]=='|')
-		{
-			if(temp!="")
-				t.push_back(temp);
-			temp="";
-			vt.push_back(t);
-			t.clear();
-		}
-		else
-		{
-			temp=temp+str[i];
-			cout<<"temp in or part is "<<temp<<"\n";
-		}
-	}
-
-	if(temp!="")
-		t.push_back(temp);
-
-	if(t.size()!=0)
-		vt.push_back(t);
-
-
-	for(auto x:vt)
-	{
-		for(auto d:x)
-			cout<<d<<" \" \" ";
-		cout<<"\n";
-	}
-
-}
-
-*/
-
