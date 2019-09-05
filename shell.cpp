@@ -14,8 +14,8 @@ using namespace std;
 
 
 vector<vector <string> > getTokens(char str[]);
-vector <string>  getTok(char str[]);
 void processarguments(vector<vector <string> > &tokens);
+vector <string>  getTok(char str[]);
 map<string,string> m;
 
 void normalexec(vector<vector<string>> tokens)
@@ -189,7 +189,8 @@ int main()
 				for(int i=2;i<tokens[0].size();i++)
 					t=t+tokens[0][i]+" ";
 
-				//cout<<"IN "<<t<<endl;
+				cout<<"IN "<<t<<endl;
+
 				m[tokens[0][1]]=t;
 			}
 			flag=false;
@@ -229,37 +230,34 @@ void processarguments(vector<vector <string> > &tokens)
 				vector< string> res=getTok((char*)t.c_str());
 				cout<<res[0];
 
-				tokens[i][0]=res[0];
-				for(int k=1;k<res[0].size();k++)
+				tokens[i][j]=res[0];
+				for(int k=1;k<res.size();k++)
 					tokens[i].insert((tokens[i].begin()+j+k),res[k]);
-
-				//cout<<tokens[i][j];
 			}
 		}
 	}
 }
 
 
-vector <string> getTok(char str[])
+vector <string>  getTok(char str[])
 {
-	vector< vector<string>> vt;
 	vector<string> t;
 	string temp="";
-	bool flag=true;
 	for(int i=0;i<strlen(str);i++)
 	{
 
 		if(str[i]==' '||str[i]=='\t'||str[i]=='='||str[i]=='\''||str[i]=='\"')
 		{
-			cout<<"While pushing "<<temp<<"\n";
+			cout<<"While pushing in getTok"<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
 		}
 
-		else if(flag)
+		else
 		{
 			temp=temp+str[i];
+			
 		}
 	}
 	cout<<"While pushing "<<temp<<"\n";
@@ -279,7 +277,7 @@ vector<vector <string> > getTokens(char str[])
 	for(int i=0;i<strlen(str);i++)
 	{
 		flag=true;
-		if(str[i]==' '||str[i]=='\t')
+		if(str[i]==' '||str[i]=='\t'||str[i]=='=')
 		{
 			cout<<"While pushing "<<temp<<"\n";
 			if(temp!="")
@@ -328,5 +326,6 @@ vector<vector <string> > getTokens(char str[])
 	if(t.size()!=0)
 		vt.push_back(t);
 
+	//cout<<"size of token is "<<vt.size()<<"\n";
 	return vt;
 }
