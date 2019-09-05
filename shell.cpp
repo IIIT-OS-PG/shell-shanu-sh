@@ -8,11 +8,15 @@
 #include<fcntl.h> 
 #include<vector>
 #include<dirent.h>
+#include<map>
 
 using namespace std;
 
 
 vector<vector <string> > getTokens(char str[]);
+vector <string>  getTok(char str[]);
+void processarguments(vector<vector <string> > &tokens);
+map<string,string> m;
 
 void normalexec(vector<vector<string>> tokens)
 {
@@ -29,7 +33,7 @@ void normalexec(vector<vector<string>> tokens)
 			break;
 		}
 		arr[k]=(char*)tokens[0][k].c_str();
-		cout<<arr[k]<<endl;
+		//cout<<arr[k]<<endl;
 	}
 	arr[k]=NULL;
 
@@ -43,7 +47,7 @@ void normalexec(vector<vector<string>> tokens)
 		{
 			pipe(pip);
 
-			cout<<"TOken is "<<tokens[0][k+1]<<endl;
+			//cout<<"TOken is "<<tokens[0][k+1]<<endl;
 			if(tokens[0][k].compare(">")==0)
 				f1=open(tokens[0][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
 			else
@@ -105,7 +109,7 @@ void pipedexecution(vector<vector<string>> tokens)
 			if(flag)
 			{
 				
-				cout<<"Token is "<<tokens[i][k+1]<<endl;
+				//cout<<"Token is "<<tokens[i][k+1]<<endl;
 				if(tokens[i][k].compare(">")==0)
 					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
 				else
@@ -157,26 +161,114 @@ int main()
 	int p;
 	cout<<"\n";
 	cout<<"$";
+
+	bool flag;
 	while(1)
 	{
 		// cout<<s<<"\n";
 		getline(cin,s);
+		flag=true;
 		strcpy(str,s.c_str());
 		vector< vector<string>> tokens=getTokens(str);
 
-		if(tokens.size()>1)
+		if(tokens[0][0].compare("exit")==0)
 		{
+			cout<<"bye...\n";
+			exit(1);
+		}
+		
+		if(tokens[0][0].compare("alias")==0)
+		{
+			if(tokens[0].size()<3)
+			{
+				cout<<"Provide proper arguments\n";
+			}
+			else
+			{
+				string t="";
+				for(int i=2;i<tokens[0].size();i++)
+					t=t+tokens[0][i]+" ";
+
+				//cout<<"IN "<<t<<endl;
+				m[tokens[0][1]]=t;
+			}
+			flag=false;
+		}
+
+		
+		if(tokens.size()>1&&flag)
+		{
+			processarguments(tokens);
 			cout<<"Piped execution\n";
 			pipedexecution(tokens);
 		}
-		else
+		else if(flag)
 		{
+			processarguments(tokens);
 			cout<<"Normal execution\n";
 			normalexec(tokens);
 		}
 		cout<<"In main method\n$";
 	}
 }
+
+void processarguments(vector<vector <string> > &tokens)
+{
+
+	int i,j;
+	
+	for(i=0;i<tokens.size();i++)
+	{
+		for(j=0;j<tokens[i].size();j++)
+		{
+			if(m.find(tokens[i][j])!=m.end())
+			{
+				cout<<tokens[i][j]<<" map "<<m[tokens[i][j]]<<endl;
+				string t=m[tokens[i][j]];
+
+				vector< string> res=getTok((char*)t.c_str());
+				cout<<res[0];
+
+				tokens[i][0]=res[0];
+				for(int k=1;k<res[0].size();k++)
+					tokens[i].insert((tokens[i].begin()+j+k),res[k]);
+
+				//cout<<tokens[i][j];
+			}
+		}
+	}
+}
+
+
+vector <string> getTok(char str[])
+{
+	vector< vector<string>> vt;
+	vector<string> t;
+	string temp="";
+	bool flag=true;
+	for(int i=0;i<strlen(str);i++)
+	{
+
+		if(str[i]==' '||str[i]=='\t'||str[i]=='='||str[i]=='\''||str[i]=='\"')
+		{
+			cout<<"While pushing "<<temp<<"\n";
+			if(temp!="")
+				t.push_back(temp);
+			temp="";
+		}
+
+		else if(flag)
+		{
+			temp=temp+str[i];
+		}
+	}
+	cout<<"While pushing "<<temp<<"\n";
+	if(temp!="")
+		t.push_back(temp);
+
+	return t;
+}
+
 
 vector<vector <string> > getTokens(char str[])
 {
@@ -196,7 +288,7 @@ vector<vector <string> > getTokens(char str[])
 		}
 		else if(str[i]=='>'&&str[i+1]=='>')
 		{
-			 cout<<"While pushing "<<temp<<"\n";
+			cout<<"While pushing "<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
@@ -236,13 +328,5 @@ vector<vector <string> > getTokens(char str[])
 	if(t.size()!=0)
 		vt.push_back(t);
 
-
-	// for(auto x:vt)
-	// {
-	// 	for(auto d:x)
-	// 		cout<<d<<" \" \" ";
-	// 	cout<<"\n";
-	// }
-	cout<<"size of token is "<<vt.size()<<"\n";
 	return vt;
 }
