@@ -7,8 +7,8 @@
 #include<sys/types.h>
 #include<fcntl.h> 
 #include<vector>
-#include<dirent.h>
 #include<map>
+#include<stdio.h>
 
 using namespace std;
 
@@ -16,7 +16,11 @@ using namespace std;
 vector<vector <string> > getTokens(char str[]);
 void processarguments(vector<vector <string> > &tokens);
 vector <string>  getTok(char str[]);
+void init();
+void setup();
 map<string,string> m;
+vector<string> env;
+
 
 void normalexec(vector<vector<string>> tokens)
 {
@@ -159,10 +163,12 @@ int main()
 	string s;
 	char str[1000];
 	int p;
-	cout<<"\n";
-	cout<<"$";
-
+	
 	bool flag;
+	init();
+	setup();
+	cout<<env[2]<<"$";
+
 	while(1)
 	{
 		// cout<<s<<"\n";
@@ -175,6 +181,17 @@ int main()
 		{
 			cout<<"bye...\n";
 			exit(1);
+		}
+
+		if(tokens[0][0].compare("cd")==0)
+		{
+			if(tokens[0].size()>2)
+				cout<<"Too many arguments\n";
+			else if(tokens[0].size()==1)
+				flag=false;
+			else if(chdir(tokens[0][1].c_str())<0)
+				cout<<"Error \n";
+			flag=false;
 		}
 		
 		if(tokens[0][0].compare("alias")==0)
@@ -209,7 +226,7 @@ int main()
 			cout<<"Normal execution\n";
 			normalexec(tokens);
 		}
-		cout<<"In main method\n$";
+		cout<<env[2]<<"$";
 	}
 }
 
@@ -260,13 +277,69 @@ vector <string>  getTok(char str[])
 			
 		}
 	}
-	cout<<"While pushing "<<temp<<"\n";
+	//cout<<"While pushing "<<temp<<"\n";
 	if(temp!="")
 		t.push_back(temp);
 
 	return t;
 }
 
+void init()
+{
+	char *path,*home,*user;
+	path=getenv("PATH");
+	home=getenv("HOME");
+	user=getenv("USER");
+	
+	int f1;
+
+	f1=open(".temp",O_WRONLY|O_CREAT|O_TRUNC);
+	if(f1<0)
+	{
+		perror("Failed to cretae file");
+	}
+
+	string t="";
+	t=t+path+"\n"+home+"\n"+user+"\n";
+	write(f1,t.c_str(),t.length());
+	close(f1);
+	chmod(".temp",0666);
+}
+
+void setup()
+{
+	int f1;
+	char buff[1000];
+	int n;
+	string t,temp;
+
+	f1=open(".temp",O_RDONLY);
+	if(f1<0)
+	{
+		perror(".temp file does not exist");
+	}
+
+	//while(getline(buff,sizeof(buff),f1)>0)
+		while((n=read(f1,buff,sizeof(buff)))>0)
+		{
+			t=t+buff;
+		}
+		
+		temp="";
+		for(int i=0;i<t.length();i++)
+		{
+			if(t[i]=='\n')
+			{
+				if(temp!="")
+					env.push_back(temp);
+				temp="";
+			}
+		temp=temp+t[i];
+		}
+
+		char *env_arg[]={(char*)("PATH="+env[0]).c_str(),(char*)("HOME="+env[1]).c_str(),(char*)("USR="+env[2]).c_str()};
+		environ=env_arg;
+}
 
 vector<vector <string> > getTokens(char str[])
 {
@@ -279,14 +352,14 @@ vector<vector <string> > getTokens(char str[])
 		flag=true;
 		if(str[i]==' '||str[i]=='\t'||str[i]=='=')
 		{
-			cout<<"While pushing "<<temp<<"\n";
+			//cout<<"While pushing "<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
 		}
 		else if(str[i]=='>'&&str[i+1]=='>')
 		{
-			cout<<"While pushing "<<temp<<"\n";
+			//cout<<"While pushing "<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
@@ -297,7 +370,7 @@ vector<vector <string> > getTokens(char str[])
 		}
 		else if(str[i]=='>'&&flag)
 		{
-			cout<<"While pushing "<<temp<<"\n";
+			//cout<<"While pushing "<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
@@ -306,7 +379,7 @@ vector<vector <string> > getTokens(char str[])
 
 		else if(str[i]=='|' && flag)
 		{
-			cout<<"While pushing "<<temp<<"\n";
+			//cout<<"While pushing "<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
@@ -319,7 +392,7 @@ vector<vector <string> > getTokens(char str[])
 			// cout<<"temp in or part is "<<temp<<"\n";
 		}
 	}
-	cout<<"While pushing "<<temp<<"\n";
+	//cout<<"While pushing "<<temp<<"\n";
 	if(temp!="")
 		t.push_back(temp);
 
