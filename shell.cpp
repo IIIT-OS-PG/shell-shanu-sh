@@ -9,13 +9,10 @@
 #include<vector>
 #include<map>
 #include<stdio.h>
-#include<setjmp.h>
 #include<signal.h>
 #include<stdlib.h>
 
 using namespace std;
-
-static jmp_buf env_alarm;
 
 vector<vector <string> > getTokens(char str[]);
 void processarguments(vector<vector <string> > &tokens);
@@ -167,27 +164,30 @@ int main()
 	string s;
 	char str[1000];
 	int p;
-	
+	vector< vector<string>> tokens;
 	bool flag;
 	init();
 	setup();
-	cout<<env[2]<<"$";
+	cout<<env[2]<<"@"<<env[3]<<":"<<env[4];
 
 	while(1)
 	{
-		// cout<<s<<"\n";
-		getline(cin,s);
 		flag=true;
-		strcpy(str,s.c_str());
-		vector< vector<string>> tokens=getTokens(str);
+		getline(cin,s);
 
-		if(tokens[0][0].compare("exit")==0)
+		if(flag)
+		{
+			strcpy(str,s.c_str());
+			tokens=getTokens(str);
+		}
+
+		if(flag&&tokens[0][0].compare("exit")==0)
 		{
 			cout<<"bye...\n";
 			exit(1);
 		}
 
-		if(tokens[0][0].compare("cd")==0)
+		if(flag&&tokens[0][0].compare("cd")==0)
 		{
 			if(tokens[0].size()>2)
 				cout<<"Too many arguments\n";
@@ -198,14 +198,14 @@ int main()
 			flag=false;
 		}
 
-		if(tokens[0][0].compare("alarm")==0)
+		if(flag&&tokens[0][0].compare("alarm")==0)
 		{
 			int val=stoi(tokens[0][1]);
 			handlealarm(val);
 			flag=false;
 		}
 		
-		if(tokens[0][0].compare("alias")==0)
+		if(flag&&tokens[0][0].compare("alias")==0)
 		{
 			if(tokens[0].size()<3)
 			{
@@ -225,7 +225,7 @@ int main()
 		}
 
 		
-		if(tokens.size()>1&&flag)
+		if(flag&&tokens.size()>1)
 		{
 			processarguments(tokens);
 			cout<<"Piped execution\n";
@@ -237,7 +237,8 @@ int main()
 			cout<<"Normal execution\n";
 			normalexec(tokens);
 		}
-		cout<<env[2]<<"$";
+		setup();
+		cout<<env[2]<<"@"<<env[3]<<":"<<env[4];
 	}
 }
 
@@ -265,9 +266,7 @@ void handlealarm(int val)
 
 void processarguments(vector<vector <string> > &tokens)
 {
-
 	int i,j;
-	
 	for(i=0;i<tokens.size();i++)
 	{
 		for(j=0;j<tokens[i].size();j++)
@@ -305,12 +304,9 @@ vector <string>  getTok(char str[])
 		}
 
 		else
-		{
 			temp=temp+str[i];
-			
-		}
 	}
-	//cout<<"While pushing "<<temp<<"\n";
+
 	if(temp!="")
 		t.push_back(temp);
 
@@ -323,17 +319,20 @@ void init()
 	path=getenv("PATH");
 	home=getenv("HOME");
 	user=getenv("USER");
+
+	char buff[100];
+	gethostname(buff,100);
 	
 	int f1;
 
 	f1=open(".temp",O_WRONLY|O_CREAT|O_TRUNC);
 	if(f1<0)
 	{
-		perror("Failed to cretae file");
+		perror("Failed to crae file");
 	}
 
 	string t="";
-	t=t+path+"\n"+home+"\n"+user+"\n";
+	t=t+path+"\n"+home+"\n"+user+"\n"+buff+"\n"+"$\n";
 	write(f1,t.c_str(),t.length());
 	close(f1);
 	chmod(".temp",0666);
@@ -344,41 +343,32 @@ void setup()
 	int f1;
 	char buff[1000];
 	int n;
-	string t,temp;
+	string t,temp="";
 
 	f1=open(".temp",O_RDONLY);
 	if(f1<0)
-	{
 		perror(".temp file does not exist");
+
+	while((n=read(f1,buff,sizeof(buff)))>0)
+		t=t+buff;
+	
+	for(int i=0;i<t.length();i++)
+	{
+		if(t[i]=='\n')
+		{
+			if(temp!="")
+				env.push_back(temp);
+			temp="";
+			continue;
+		}
+	temp=temp+t[i];
 	}
 
-	//while(getline(buff,sizeof(buff),f1)>0)
-		while((n=read(f1,buff,sizeof(buff)))>0)
-		{
-			t=t+buff;
-		}
-		
-		temp="";
-		for(int i=0;i<t.length();i++)
-		{
-			if(t[i]=='\n')
-			{
-				if(temp!="")
-					env.push_back(temp);
-				temp="";
-			}
-		temp=temp+t[i];
-		}
-
-		//char *env_arg[]={(char*)"PATH="+(env[0]).c_str(),NULL};
-		//environ=env_arg;
-		// cout<<"PATH"+env[0]<<endl;
-		// char *env_arg[]={(char*)"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",(char*)"HOME=/home/shanu",NULL};
-		// environ=env_arg;
-
-		// cout<<getenv("PATH")<<endl;
-
-		
+	setenv("PATH",env[0].c_str(),1);
+	setenv("HOME",env[1].c_str(),1);
+	setenv("USER",env[2].c_str(),1);
+	setenv("HOSTNAME",env[3].c_str(),1);
+	setenv("PS1",env[4].c_str(),1);
 }
 
 vector<vector <string> > getTokens(char str[])
