@@ -9,9 +9,13 @@
 #include<vector>
 #include<map>
 #include<stdio.h>
+#include<setjmp.h>
+#include<signal.h>
+#include<stdlib.h>
 
 using namespace std;
 
+static jmp_buf env_alarm;
 
 vector<vector <string> > getTokens(char str[]);
 void processarguments(vector<vector <string> > &tokens);
@@ -20,7 +24,7 @@ void init();
 void setup();
 map<string,string> m;
 vector<string> env;
-
+void handlealarm(int);
 
 void normalexec(vector<vector<string>> tokens)
 {
@@ -55,7 +59,7 @@ void normalexec(vector<vector<string>> tokens)
 			if(tokens[0][k].compare(">")==0)
 				f1=open(tokens[0][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
 			else
-				f1=open(tokens[0][k+1].c_str(),O_WRONLY|O_APPEND);
+				f1=open(tokens[0][k+1].c_str(),O_WRONLY|O_CREAT|O_APPEND);
 			chmod(tokens[0][k+1].c_str(),0666);
 			dup2(f1,1);
 			close(pip[0]);
@@ -117,7 +121,7 @@ void pipedexecution(vector<vector<string>> tokens)
 				if(tokens[i][k].compare(">")==0)
 					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
 				else
-					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_APPEND);
+					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_APPEND);
 				chmod(tokens[i][k+1].c_str(),0666);
 				dup2(f1,1);
 				dup2(u,0);
@@ -193,6 +197,13 @@ int main()
 				cout<<"Error \n";
 			flag=false;
 		}
+
+		if(tokens[0][0].compare("alarm")==0)
+		{
+			int val=stoi(tokens[0][1]);
+			handlealarm(val);
+			flag=false;
+		}
 		
 		if(tokens[0][0].compare("alias")==0)
 		{
@@ -229,6 +240,28 @@ int main()
 		cout<<env[2]<<"$";
 	}
 }
+
+static void sig_alarm(int signo)
+{
+	cout<<"Alarm done\n";
+}
+
+void handlealarm(int val)
+{
+	int p=fork();
+	if(p>0)
+	{
+		wait(NULL);
+	}
+	else
+	{
+		signal(SIGALRM,sig_alarm);
+		alarm(val);
+		pause();
+
+	}
+}
+
 
 void processarguments(vector<vector <string> > &tokens)
 {
@@ -337,8 +370,15 @@ void setup()
 		temp=temp+t[i];
 		}
 
-		char *env_arg[]={(char*)("PATH="+env[0]).c_str(),(char*)("HOME="+env[1]).c_str(),(char*)("USR="+env[2]).c_str()};
-		environ=env_arg;
+		//char *env_arg[]={(char*)"PATH="+(env[0]).c_str(),NULL};
+		//environ=env_arg;
+		// cout<<"PATH"+env[0]<<endl;
+		// char *env_arg[]={(char*)"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin",(char*)"HOME=/home/shanu",NULL};
+		// environ=env_arg;
+
+		// cout<<getenv("PATH")<<endl;
+
+		
 }
 
 vector<vector <string> > getTokens(char str[])
