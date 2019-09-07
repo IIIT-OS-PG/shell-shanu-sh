@@ -24,60 +24,6 @@ map<string,string> envi;
 void handlealarm(int);
 void exporting(string,string);
 
-void normalexec(vector<vector<string>> tokens)
-{
-	char *arr[1000];
-	int p;
-	bool flag=false;
-	int k;
-	int pip[2];
-	for(k=0;k<tokens[0].size();k++)
-	{
-		if((tokens[0][k].compare(">")==0)||(tokens[0][k].compare(">>")==0))
-		{
-			flag=true;
-			break;
-		}
-		arr[k]=(char*)tokens[0][k].c_str();
-		//cout<<arr[k]<<endl;
-	}
-	arr[k]=NULL;
-
-	p=fork();
-	
-	if(p==0)
-	{
-		cout<<"Child\n";
-		int f1;
-		if(flag)
-		{
-			pipe(pip);
-
-			//cout<<"TOken is "<<tokens[0][k+1]<<endl;
-			if(tokens[0][k].compare(">")==0)
-				f1=open(tokens[0][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
-			else
-				f1=open(tokens[0][k+1].c_str(),O_WRONLY|O_CREAT|O_APPEND);
-			chmod(tokens[0][k+1].c_str(),0666);
-			dup2(f1,1);
-			close(pip[0]);
-			close(pip[1]);
-
-		}	
-		if(execvp(arr[0],arr)<0)
-		{
-			perror("Execution failed");
-			exit(1);
-		}
-		close(f1);
-		cout<<"Child\n";	
-	}
-	else
-	{
-		wait(NULL);
-	}
-}
-
 void pipedexecution(vector<vector<string>> tokens)
 {
 	char *arr[100];
@@ -112,7 +58,9 @@ void pipedexecution(vector<vector<string>> tokens)
 				if(tokens[i][k].compare(">")==0)
 					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
 				else
-					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_APPEND);
+					f1=open(tokens[i][k+1].c_str(),O_WRONLY);
+					if(f1<0)
+						f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_APPEND);
 				chmod(tokens[i][k+1].c_str(),0666);
 				dup2(f1,1);
 				dup2(u,0);
@@ -122,7 +70,8 @@ void pipedexecution(vector<vector<string>> tokens)
 			}
 			else
 			{
-				dup2(u,0);
+				if(i!=0)
+					dup2(u,0);
 				//close(pip[0]);
 							
 				if(i!=tokens.size()-1)
@@ -133,12 +82,9 @@ void pipedexecution(vector<vector<string>> tokens)
 			}
 		
 			if(execvp(arr[0],arr)<0)
-			{
 				perror("Execution failed");
-				
-			}
-			close(f1);
-			cout<<"Child exit\n";	
+
+			close(f1);	
 		}
 		else
 		{
@@ -158,19 +104,18 @@ int main()
 	bool flag;
 	init();
 	//setup();
-	cout<<envi["USER"]<<"@"<<envi["HOSTNAME"]<<":"<<envi["PS1"];
+	
 
 	while(1)
 	{
+		cout<<envi["USER"]<<"@"<<envi["HOSTNAME"]<<":"<<envi["PS1"];
 		flag=true;
 		getline(cin,s);
+		strcpy(str,s.c_str());
+		tokens=getTokens(str);
 
-		if(flag)
-		{
-			strcpy(str,s.c_str());
-			tokens=getTokens(str);
-		}
-
+		if(tokens.size()==0)
+			continue;
 		if(flag&&tokens[0][0].compare("exit")==0)
 		{
 			cout<<"bye...\n";
@@ -183,9 +128,14 @@ int main()
 				cout<<"Too many arguments\n";
 			else if(tokens[0].size()==1)
 				flag=false;
-			else if(chdir(tokens[0][1].c_str())<0)
-				cout<<"Error \n";
-			flag=false;
+			else
+			{
+				if(tokens[0][1].compare("~")==0)
+					chdir(envi["HOME"].c_str());
+			 	else if(chdir(tokens[0][1].c_str())<0)
+					cout<<"Error \n";
+				flag=false;
+			}
 		}
 
 		if(flag&&tokens[0][0].compare("export")==0)
@@ -222,20 +172,19 @@ int main()
 		}
 
 		
-		if(flag&&tokens.size()>1)
-		{
-			processarguments(tokens);
-			cout<<"Piped execution\n";
-			pipedexecution(tokens);
-		}
+		// if(flag&&tokens.size()>1)
+		// {
+		// 	processarguments(tokens);
+		// 	cout<<"Piped execution\n";
+		// 	pipedexecution(tokens);
+		// }
 		else if(flag)
 		{
 			processarguments(tokens);
-			cout<<"Normal execution\n";
-			normalexec(tokens);
+			cout<<"Piping execution\n";
+			pipedexecution(tokens);
 		}
 		//setup();
-		cout<<envi["USER"]<<"@"<<envi["HOSTNAME"]<<":"<<envi["PS1"];
 	}
 }
 
@@ -335,13 +284,11 @@ void init()
 	write(f1,t.c_str(),t.length());
 	close(f1);
 
-
 	envi["PATH"]=string(path);
 	envi["HOME"]=string(home);
 	envi["USER"]=string(user);
 	envi["HOSTNAME"]=string(buff);
 	envi["PS1"]="$";
-
 	setenv("HOSTNAME",buff,1);
  	setenv("PS1","$",1);
 }
@@ -423,7 +370,5 @@ vector<vector <string> > getTokens(char str[])
 
 	if(t.size()!=0)
 		vt.push_back(t);
-
-	//cout<<"size of token is "<<vt.size()<<"\n";
 	return vt;
 }
