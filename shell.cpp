@@ -20,8 +20,9 @@ vector <string>  getTok(char str[]);
 void init();
 void setup();
 map<string,string> m;
-vector<string> env;
+map<string,string> envi;
 void handlealarm(int);
+void exporting(string,string);
 
 void normalexec(vector<vector<string>> tokens)
 {
@@ -89,31 +90,24 @@ void pipedexecution(vector<vector<string>> tokens)
 	for(int i=0;i<tokens.size();i++)
 	{
 		pipe(pip);
-		for(k=0;k<tokens[i].size();k++){
-
+		for(k=0;k<tokens[i].size();k++)
+		{
 			cout<<tokens[i][k]<<" ";
 			if((tokens[i][k].compare(">")==0)||(tokens[i][k].compare(">>")==0))
 			{
 				flag=true;
 				break;
 			}
-
 			arr[k]=(char*)tokens[i][k].c_str();
 			cout<<arr[k]<<endl;
 		}
-		
 		arr[k]=NULL;
-		
 		p=fork();
-
-
 		if(p==0)
 		{
 			cout<<"Child begin\n";
-			//close(pip[1]);
 			if(flag)
 			{
-				
 				//cout<<"Token is "<<tokens[i][k+1]<<endl;
 				if(tokens[i][k].compare(">")==0)
 					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
@@ -144,19 +138,15 @@ void pipedexecution(vector<vector<string>> tokens)
 				
 			}
 			close(f1);
-			//exit(0);
 			cout<<"Child exit\n";	
 		}
 		else
 		{
 			wait(NULL);
-
 			close(pip[1]);
 			u=pip[0];
-		}
-		
+		}	
 	}
-	
 }
 
 int main()
@@ -167,8 +157,8 @@ int main()
 	vector< vector<string>> tokens;
 	bool flag;
 	init();
-	setup();
-	cout<<env[2]<<"@"<<env[3]<<":"<<env[4];
+	//setup();
+	cout<<envi["USER"]<<"@"<<envi["HOSTNAME"]<<":"<<envi["PS1"];
 
 	while(1)
 	{
@@ -195,6 +185,13 @@ int main()
 				flag=false;
 			else if(chdir(tokens[0][1].c_str())<0)
 				cout<<"Error \n";
+			flag=false;
+		}
+
+		if(flag&&tokens[0][0].compare("export")==0)
+		{
+			cout<<"In export\n";
+			exporting(tokens[0][1],tokens[0][2]);
 			flag=false;
 		}
 
@@ -237,8 +234,8 @@ int main()
 			cout<<"Normal execution\n";
 			normalexec(tokens);
 		}
-		setup();
-		cout<<env[2]<<"@"<<env[3]<<":"<<env[4];
+		//setup();
+		cout<<envi["USER"]<<"@"<<envi["HOSTNAME"]<<":"<<envi["PS1"];
 	}
 }
 
@@ -302,7 +299,6 @@ vector <string>  getTok(char str[])
 				t.push_back(temp);
 			temp="";
 		}
-
 		else
 			temp=temp+str[i];
 	}
@@ -319,56 +315,55 @@ void init()
 	path=getenv("PATH");
 	home=getenv("HOME");
 	user=getenv("USER");
-
+	int p;
 	char buff[100];
 	gethostname(buff,100);
 	
 	int f1;
 
-	f1=open(".temp",O_WRONLY|O_CREAT|O_TRUNC);
+	string t(home);
+	t=t+"/.temp";
+	f1=open(t.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
+	chmod(t.c_str(),0666);
 	if(f1<0)
 	{
-		perror("Failed to crae file");
+		perror("Failed to create file");
 	}
 
-	string t="";
+	t="";
 	t=t+path+"\n"+home+"\n"+user+"\n"+buff+"\n"+"$\n";
 	write(f1,t.c_str(),t.length());
 	close(f1);
-	chmod(".temp",0666);
+
+
+	envi["PATH"]=string(path);
+	envi["HOME"]=string(home);
+	envi["USER"]=string(user);
+	envi["HOSTNAME"]=string(buff);
+	envi["PS1"]="$";
+
+	setenv("HOSTNAME",buff,1);
+ 	setenv("PS1","$",1);
 }
 
-void setup()
+void exporting(string data1,string data2)
 {
 	int f1;
 	char buff[1000];
 	int n;
 	string t,temp="";
-
-	f1=open(".temp",O_RDONLY);
+	t=envi["HOME"]+"/.temp";
+	vector<string> arr;
+	cout<<t<<endl;
+	f1=open(t.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
+	chmod(t.c_str(),0666);
 	if(f1<0)
-		perror(".temp file does not exist");
-
-	while((n=read(f1,buff,sizeof(buff)))>0)
-		t=t+buff;
-	
-	for(int i=0;i<t.length();i++)
 	{
-		if(t[i]=='\n')
-		{
-			if(temp!="")
-				env.push_back(temp);
-			temp="";
-			continue;
-		}
-	temp=temp+t[i];
+		perror("Failed to create file");
 	}
 
-	setenv("PATH",env[0].c_str(),1);
-	setenv("HOME",env[1].c_str(),1);
-	setenv("USER",env[2].c_str(),1);
-	setenv("HOSTNAME",env[3].c_str(),1);
-	setenv("PS1",env[4].c_str(),1);
+	envi[data1]=data2;
+	setenv(data1.c_str(),data2.c_str(),1);
 }
 
 vector<vector <string> > getTokens(char str[])
