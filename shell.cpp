@@ -10,90 +10,23 @@
 #include<map>
 #include<stdio.h>
 #include<signal.h>
+#include<pwd.h>
 #include<stdlib.h>
 
 using namespace std;
+
+map<string,string> m;
+map<string,string> envi;
+
 
 vector<vector <string> > getTokens(char str[]);
 void processarguments(vector<vector <string> > &tokens);
 vector <string>  getTok(char str[]);
 void init();
 void setup();
-map<string,string> m;
-map<string,string> envi;
 void handlealarm(int);
 void exporting(string,string);
-
-void pipedexecution(vector<vector<string>> tokens)
-{
-	char *arr[100];
-	int pip[2];
-	int p;
-
-	int u=0,f1;
-	int k;
-	bool flag=false;
-	for(int i=0;i<tokens.size();i++)
-	{
-		pipe(pip);
-		for(k=0;k<tokens[i].size();k++)
-		{
-			cout<<tokens[i][k]<<" ";
-			if((tokens[i][k].compare(">")==0)||(tokens[i][k].compare(">>")==0))
-			{
-				flag=true;
-				break;
-			}
-			arr[k]=(char*)tokens[i][k].c_str();
-			cout<<arr[k]<<endl;
-		}
-		arr[k]=NULL;
-		p=fork();
-		if(p==0)
-		{
-			cout<<"Child begin\n";
-			if(flag)
-			{
-				//cout<<"Token is "<<tokens[i][k+1]<<endl;
-				if(tokens[i][k].compare(">")==0)
-					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
-				else
-					f1=open(tokens[i][k+1].c_str(),O_WRONLY);
-					if(f1<0)
-						f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_APPEND);
-				chmod(tokens[i][k+1].c_str(),0666);
-				dup2(f1,1);
-				dup2(u,0);
-				close(pip[0]);
-				close(pip[1]);
-
-			}
-			else
-			{
-				if(i!=0)
-					dup2(u,0);
-				//close(pip[0]);
-							
-				if(i!=tokens.size()-1)
-					dup2(pip[1],1);
-
-				close(pip[0]);
-				close(pip[1]);
-			}
-		
-			if(execvp(arr[0],arr)<0)
-				perror("Execution failed");
-
-			close(f1);	
-		}
-		else
-		{
-			wait(NULL);
-			close(pip[1]);
-			u=pip[0];
-		}	
-	}
-}
+void pipedexecution(vector<vector<string>>);
 
 int main()
 {
@@ -103,12 +36,12 @@ int main()
 	vector< vector<string>> tokens;
 	bool flag;
 	init();
-	//setup();
+	cout<<"*************************** Welcome to shell ***********************************\n";
 	
 
 	while(1)
 	{
-		cout<<envi["USER"]<<"@"<<envi["HOSTNAME"]<<":"<<envi["PS1"];
+		cout<<envi["USER"]<<envi["PS1"];
 		flag=true;
 		getline(cin,s);
 		strcpy(str,s.c_str());
@@ -170,21 +103,12 @@ int main()
 			}
 			flag=false;
 		}
-
-		
-		// if(flag&&tokens.size()>1)
-		// {
-		// 	processarguments(tokens);
-		// 	cout<<"Piped execution\n";
-		// 	pipedexecution(tokens);
-		// }
 		else if(flag)
 		{
 			processarguments(tokens);
 			cout<<"Piping execution\n";
 			pipedexecution(tokens);
 		}
-		//setup();
 	}
 }
 
@@ -261,9 +185,11 @@ vector <string>  getTok(char str[])
 void init()
 {
 	char *path,*home,*user;
+	struct passwd *pw;
+	pw=getpwuid(getuid());
 	path=getenv("PATH");
-	home=getenv("HOME");
-	user=getenv("USER");
+	home=pw->pw_dir;
+	user=pw->pw_name;
 	int p;
 	char buff[100];
 	gethostname(buff,100);
@@ -291,6 +217,12 @@ void init()
 	envi["PS1"]="$";
 	setenv("HOSTNAME",buff,1);
  	setenv("PS1","$",1);
+
+ 	vector<vector<string> > tp;
+ 	vector<string> t1;
+ 	t1.push_back("clear");
+ 	tp.push_back(t1);
+ 	pipedexecution(tp);
 }
 
 void exporting(string data1,string data2)
@@ -371,4 +303,75 @@ vector<vector <string> > getTokens(char str[])
 	if(t.size()!=0)
 		vt.push_back(t);
 	return vt;
+}
+
+void pipedexecution(vector<vector<string>> tokens)
+{
+	char *arr[100];
+	int pip[2];
+	int p;
+
+	int u=0,f1;
+	int k;
+	bool flag=false;
+	for(int i=0;i<tokens.size();i++)
+	{
+		pipe(pip);
+		for(k=0;k<tokens[i].size();k++)
+		{
+			cout<<tokens[i][k]<<" ";
+			if((tokens[i][k].compare(">")==0)||(tokens[i][k].compare(">>")==0))
+			{
+				flag=true;
+				break;
+			}
+			arr[k]=(char*)tokens[i][k].c_str();
+			cout<<arr[k]<<endl;
+		}
+		arr[k]=NULL;
+		p=fork();
+		if(p==0)
+		{
+			cout<<"Child begin\n";
+			if(flag)
+			{
+				//cout<<"Token is "<<tokens[i][k+1]<<endl;
+				if(tokens[i][k].compare(">")==0)
+					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
+				else
+					f1=open(tokens[i][k+1].c_str(),O_WRONLY);
+					if(f1<0)
+						f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_APPEND);
+				chmod(tokens[i][k+1].c_str(),0666);
+				dup2(f1,1);
+				dup2(u,0);
+				close(pip[0]);
+				close(pip[1]);
+
+			}
+			else
+			{
+				if(i!=0)
+					dup2(u,0);
+				//close(pip[0]);
+							
+				if(i!=tokens.size()-1)
+					dup2(pip[1],1);
+
+				close(pip[0]);
+				close(pip[1]);
+			}
+		
+			if(execvp(arr[0],arr)<0)
+				perror("Execution failed");
+
+			close(f1);	
+		}
+		else
+		{
+			wait(NULL);
+			close(pip[1]);
+			u=pip[0];
+		}	
+	}
 }
