@@ -16,7 +16,7 @@
 using namespace std;
 
 map<string,string> m;
-map<string,string> envi;
+map <string,string> envi;
 
 
 vector<vector <string> > getTokens(char str[]);
@@ -36,8 +36,7 @@ int main()
 	vector< vector<string>> tokens;
 	bool flag;
 	init();
-	cout<<"*************************** Welcome to shell ***********************************\n";
-	
+	cout<<"*************************** Welcome to shell ********************************\n\n";	
 
 	while(1)
 	{
@@ -73,8 +72,14 @@ int main()
 
 		if(flag&&tokens[0][0].compare("export")==0)
 		{
-			cout<<"In export\n";
-			exporting(tokens[0][1],tokens[0][2]);
+			string te="";
+			for(int i=2;i<tokens[0].size();i++)
+			{
+				te=te+tokens[0][i];
+				if(i!=tokens[0].size()-1)
+					te=te+" ";
+			}
+			exporting(tokens[0][1],te);
 			flag=false;
 		}
 
@@ -88,16 +93,12 @@ int main()
 		if(flag&&tokens[0][0].compare("alias")==0)
 		{
 			if(tokens[0].size()<3)
-			{
 				cout<<"Provide proper arguments\n";
-			}
 			else
 			{
 				string t="";
 				for(int i=2;i<tokens[0].size();i++)
 					t=t+tokens[0][i]+" ";
-
-				cout<<"IN "<<t<<endl;
 
 				m[tokens[0][1]]=t;
 			}
@@ -106,7 +107,6 @@ int main()
 		else if(flag)
 		{
 			processarguments(tokens);
-			cout<<"Piping execution\n";
 			pipedexecution(tokens);
 		}
 	}
@@ -122,7 +122,7 @@ void handlealarm(int val)
 	int p=fork();
 	if(p>0)
 	{
-		wait(NULL);
+		
 	}
 	else
 	{
@@ -143,12 +143,9 @@ void processarguments(vector<vector <string> > &tokens)
 		{
 			if(m.find(tokens[i][j])!=m.end())
 			{
-				cout<<tokens[i][j]<<" map "<<m[tokens[i][j]]<<endl;
 				string t=m[tokens[i][j]];
-
 				vector< string> res=getTok((char*)t.c_str());
-				cout<<res[0];
-
+				
 				tokens[i][j]=res[0];
 				for(int k=1;k<res.size();k++)
 					tokens[i].insert((tokens[i].begin()+j+k),res[k]);
@@ -164,10 +161,8 @@ vector <string>  getTok(char str[])
 	string temp="";
 	for(int i=0;i<strlen(str);i++)
 	{
-
 		if(str[i]==' '||str[i]=='\t'||str[i]=='='||str[i]=='\''||str[i]=='\"')
 		{
-			cout<<"While pushing in getTok"<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
@@ -196,20 +191,6 @@ void init()
 	
 	int f1;
 
-	string t(home);
-	t=t+"/.temp";
-	f1=open(t.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
-	chmod(t.c_str(),0666);
-	if(f1<0)
-	{
-		perror("Failed to create file");
-	}
-
-	t="";
-	t=t+path+"\n"+home+"\n"+user+"\n"+buff+"\n"+"$\n";
-	write(f1,t.c_str(),t.length());
-	close(f1);
-
 	envi["PATH"]=string(path);
 	envi["HOME"]=string(home);
 	envi["USER"]=string(user);
@@ -217,6 +198,18 @@ void init()
 	envi["PS1"]="$";
 	setenv("HOSTNAME",buff,1);
  	setenv("PS1","$",1);
+
+	string t(home);
+	t=t+"/.temp";
+	f1=open(t.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
+	chmod(t.c_str(),0666);
+	if(f1<0)
+		perror("Failed to create file");
+
+	for(auto it=envi.begin();it!=envi.end();it++)
+		t=t+it->first+"="+it->second+"\n";
+	write(f1,t.c_str(),t.length());
+	close(f1);
 
  	vector<vector<string> > tp;
  	vector<string> t1;
@@ -230,18 +223,22 @@ void exporting(string data1,string data2)
 	int f1;
 	char buff[1000];
 	int n;
-	string t,temp="";
+	string t="",temp="";
 	t=envi["HOME"]+"/.temp";
 	vector<string> arr;
-	cout<<t<<endl;
-	f1=open(t.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
-	chmod(t.c_str(),0666);
+
 	if(f1<0)
-	{
 		perror("Failed to create file");
-	}
 
 	envi[data1]=data2;
+	f1=open(t.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
+	chmod(t.c_str(),0666);
+	t="";
+	for(auto it=envi.begin();it!=envi.end();it++)
+		t=t+it->first+"="+it->second+"\n";
+
+	write(f1,t.c_str(),t.length());
+	close(f1);
 	setenv(data1.c_str(),data2.c_str(),1);
 }
 
@@ -319,23 +316,21 @@ void pipedexecution(vector<vector<string>> tokens)
 		pipe(pip);
 		for(k=0;k<tokens[i].size();k++)
 		{
-			cout<<tokens[i][k]<<" ";
+			//cout<<tokens[i][k]<<" ";
 			if((tokens[i][k].compare(">")==0)||(tokens[i][k].compare(">>")==0))
 			{
 				flag=true;
 				break;
 			}
 			arr[k]=(char*)tokens[i][k].c_str();
-			cout<<arr[k]<<endl;
+			//cout<<arr[k]<<endl;
 		}
 		arr[k]=NULL;
 		p=fork();
 		if(p==0)
 		{
-			cout<<"Child begin\n";
 			if(flag)
 			{
-				//cout<<"Token is "<<tokens[i][k+1]<<endl;
 				if(tokens[i][k].compare(">")==0)
 					f1=open(tokens[i][k+1].c_str(),O_WRONLY|O_CREAT|O_TRUNC);
 				else
@@ -375,3 +370,4 @@ void pipedexecution(vector<vector<string>> tokens)
 		}	
 	}
 }
+
