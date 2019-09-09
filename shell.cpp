@@ -237,23 +237,26 @@ void init()
 	envi["USER"]=string(user);
 	envi["HOSTNAME"]=string(buff);
 	envi["PS1"]="$";
-	envi["HIST"]="5";
+	envi["HIST"]="100";
 
 	// setenv("HOSTNAME",buff,1);
  // 	setenv("PS1","$",1);
  // 	setenv("HIST","5",1);
 
+	string t="PATH="+string(path);
+
 	char *env[1000]={(char*)("PATH="+string(path)).c_str(),(char*)("HOME="+string(home)).c_str(),(char*)("USER="+string(user)).c_str(),
-										(char*)("HOSTNAME="+string(buff)).c_str(),(char*)"PS1=$",(char*)"HIST=5",
+										(char*)("HOSTNAME="+string(buff)).c_str(),(char*)"PS1=$",(char*)"HIST=100",
 										(char*)"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus",
 										(char*)"DISPLAY=:0",NULL};
-										
+	//memcpy(environ,env,sizeof(env));
+
 	environ=env;
  	hsize=stoi(envi["HIST"]);
-	string t(home);
-	t=t+"/.mybashrc";
-	f1=open(t.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
-	chmod(t.c_str(),0666);
+	string te(home);
+	te=te+"/.mybashrc";
+	f1=open(te.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
+	chmod(te.c_str(),0666);
 	if(f1<0)
 		perror("Failed to create file");
 	t="";
@@ -261,12 +264,6 @@ void init()
 		t=t+it->first+"="+it->second+"\n";
 	write(f1,t.c_str(),t.length());
 	close(f1);
-
- 	// vector<vector<string> > tp;
- 	// vector<string> t1;
- 	// t1.push_back("cls");
- 	// tp.push_back(t1);
- 	// pipedexecution(tp);
 
  	cout<<"\033[H\033[J";
 }
@@ -284,8 +281,7 @@ void exporting(string data1,string data2)
 		perror("Failed to create file");
 
 	envi[data1]=data2;
-	if(data1.compare("HIST")==0)
-		hsize=stoi(data2);
+	
 	f1=open(t.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
 	chmod(t.c_str(),0666);
 	t="";
