@@ -12,12 +12,14 @@
 #include<signal.h>
 #include<pwd.h>
 #include<stdlib.h>
+#include<deque>
 
 using namespace std;
 
 map<string,string> m;
 map <string,string> envi;
-
+deque<string> hist;
+int hsize;
 
 vector<vector <string> > getTokens(char str[]);
 void processarguments(vector<vector <string> > &tokens);
@@ -43,6 +45,17 @@ int main()
 		cout<<envi["USER"]<<envi["PS1"];
 		flag=true;
 		getline(cin,s);
+		
+		if(hist.size()==hsize)
+		{
+			hist.pop_front();
+			hist.push_back(s);
+		}
+		else
+		{
+			hist.push_back(s);
+		}
+
 		strcpy(str,s.c_str());
 		tokens=getTokens(str);
 
@@ -52,6 +65,35 @@ int main()
 		{
 			cout<<"bye...\n";
 			exit(1);
+		}
+
+		if(flag&&tokens[0][0].compare("clear")==0)
+		{
+			cout<<"\033[H\033[J";
+			flag=false;
+		}
+
+		if(flag&&tokens[0][0].compare("open")==0)
+		{
+			
+			if (tokens[0][1].find(".mp4")!=string::npos)
+			{
+				cout<<"Vlc\n";
+    			tokens[0][0]="vlc";
+			}
+
+    		else if(tokens[0][1].find(".cpp")!=string::npos||tokens[0][1].find(".txt")!=string::npos||tokens[0][1].find(".c")!=string::npos)
+    			tokens[0][0]="gedit";
+		
+			pipedexecution(tokens);
+			flag=false;
+		}
+
+		if(flag&&tokens[0][0].compare("history")==0)
+		{
+			for(auto it = hist.rbegin();it!=hist.rend();it++) 
+       			cout<<*it<<"\n";
+			flag=false;
 		}
 
 		if(flag&&tokens[0][0].compare("cd")==0)
@@ -112,7 +154,7 @@ int main()
 	}
 }
 
-static void sig_alarm(int signo)
+static void signal_alarm(int signo)
 {
 	cout<<"Alarm check notification\n";
 }
@@ -126,7 +168,7 @@ void handlealarm(int val)
 	}
 	else
 	{
-		signal(SIGALRM,sig_alarm);
+		signal(SIGALRM,signal_alarm);
 		alarm(val);
 		pause();
 	}
@@ -195,26 +237,38 @@ void init()
 	envi["USER"]=string(user);
 	envi["HOSTNAME"]=string(buff);
 	envi["PS1"]="$";
-	setenv("HOSTNAME",buff,1);
- 	setenv("PS1","$",1);
+	envi["HIST"]="5";
 
+	// setenv("HOSTNAME",buff,1);
+ // 	setenv("PS1","$",1);
+ // 	setenv("HIST","5",1);
+
+	char *env[1000]={(char*)("PATH="+string(path)).c_str(),(char*)("HOME="+string(home)).c_str(),(char*)("USER="+string(user)).c_str(),
+										(char*)("HOSTNAME="+string(buff)).c_str(),(char*)"PS1=$",(char*)"HIST=5",
+										(char*)"DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus",
+										(char*)"DISPLAY=:0",NULL};
+										
+	environ=env;
+ 	hsize=stoi(envi["HIST"]);
 	string t(home);
-	t=t+"/.temp";
+	t=t+"/.mybashrc";
 	f1=open(t.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
 	chmod(t.c_str(),0666);
 	if(f1<0)
 		perror("Failed to create file");
-
+	t="";
 	for(auto it=envi.begin();it!=envi.end();it++)
 		t=t+it->first+"="+it->second+"\n";
 	write(f1,t.c_str(),t.length());
 	close(f1);
 
- 	vector<vector<string> > tp;
- 	vector<string> t1;
- 	t1.push_back("clear");
- 	tp.push_back(t1);
- 	pipedexecution(tp);
+ 	// vector<vector<string> > tp;
+ 	// vector<string> t1;
+ 	// t1.push_back("cls");
+ 	// tp.push_back(t1);
+ 	// pipedexecution(tp);
+
+ 	cout<<"\033[H\033[J";
 }
 
 void exporting(string data1,string data2)
@@ -223,13 +277,15 @@ void exporting(string data1,string data2)
 	char buff[1000];
 	int n;
 	string t="",temp="";
-	t=envi["HOME"]+"/.temp";
+	t=envi["HOME"]+"/.mybashrc";
 	vector<string> arr;
 
 	if(f1<0)
 		perror("Failed to create file");
 
 	envi[data1]=data2;
+	if(data1.compare("HIST")==0)
+		hsize=stoi(data2);
 	f1=open(t.c_str(),O_WRONLY|O_CREAT|O_TRUNC);
 	chmod(t.c_str(),0666);
 	t="";
@@ -369,4 +425,3 @@ void pipedexecution(vector<vector<string>> tokens)
 		}	
 	}
 }
-
