@@ -304,7 +304,6 @@ vector<vector <string> > getTokens(char str[])
 		flag=true;
 		if(str[i]==' '||str[i]=='\t'||str[i]=='=')
 		{
-			//cout<<"While pushing "<<temp<<"\n";
 			if(temp!="")
 				t.push_back(temp);
 			temp="";
@@ -344,7 +343,7 @@ vector<vector <string> > getTokens(char str[])
 			// cout<<"temp in or part is "<<temp<<"\n";
 		}
 	}
-	//cout<<"While pushing "<<temp<<"\n";
+	
 	if(temp!="")
 		t.push_back(temp);
 
