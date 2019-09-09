@@ -114,7 +114,7 @@ int main()
 
 static void sig_alarm(int signo)
 {
-	cout<<"Alarm done\n";
+	cout<<"Alarm check notification\n";
 }
 
 void handlealarm(int val)
@@ -129,7 +129,6 @@ void handlealarm(int val)
 		signal(SIGALRM,sig_alarm);
 		alarm(val);
 		pause();
-
 	}
 }
 
